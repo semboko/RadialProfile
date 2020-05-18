@@ -1,5 +1,6 @@
 import tkinter as tk
 from PIL.ImageTk import PhotoImage
+from PIL import Image
 from tkinter.filedialog import askopenfilenames
 from radialPos.model import AppModel
 from radialPos.constants import AppModes
@@ -113,3 +114,6 @@ class View:
         for radius in radii:
             self.canvas.create_line(*radius, fill='green', dash=True)
 
+        img = Image.open(self.model.FileNames[self.model.CurrentImage])
+        pixels = img.load()
+        print(pixels[Cy, Cy])
