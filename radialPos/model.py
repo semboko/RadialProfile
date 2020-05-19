@@ -1,6 +1,7 @@
 from typing import List, Tuple
 import numpy as np
 import math
+from radialPos.constants import RadialAnalysis
 
 
 class AppModel:
@@ -48,6 +49,14 @@ class AppModel:
             angles.append(alpha)
 
         return angles
+
+    def increment_current_image(self):
+        self.CurrentImage = (self.CurrentImage + 1) % len(self.FileNames)
+        print(f'CurrentImage: {self.FileNames[self.CurrentImage]}')
+
+    def decrement_current_image(self):
+        self.CurrentImage = (self.CurrentImage - 1) % len(self.FileNames)
+        print(f'CurrentImage: {self.FileNames[self.CurrentImage]}')
 
     def arrange_selection(self):
         Cx, Cy = self.center_selection()
@@ -107,7 +116,7 @@ class AppModel:
 
         extreme_points = []
 
-        for gamma in range(0, 360, 10):
+        for gamma in range(0, 360, RadialAnalysis.AngleStepDegree):
 
             rad_gamma = math.radians(gamma)
             Rx = Cx - math.cos(rad_gamma) * max_radius
