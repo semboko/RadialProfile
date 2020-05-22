@@ -8,4 +8,4 @@ class AppModes:
 
 class RadialAnalysis:
     AngleStepDegree = 5
-    RPStepPercent = 10
+    RPStepPercent = 5

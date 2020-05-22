@@ -3,9 +3,13 @@ from PIL.ImageTk import PhotoImage
 from PIL import Image
 from tkinter.filedialog import askopenfilenames
 from radialPos.model import AppModel
-from radialPos.constants import AppModes
+from radialPos.constants import RadialAnalysis
 import math
-from time import sleep
+import numpy as np
+import matplotlib.pyplot as plt
+
+MAX_CANVAS_WIDTH = 800
+MAX_CANVAS_HEIGHT = 500
 
 
 class LeftMenu(tk.Frame):
@@ -14,24 +18,40 @@ class LeftMenu(tk.Frame):
         super().__init__(*args, **kwargs)
         self.pack(ipadx=20)
 
-        self.OpenFolderButton = tk.Button(self, text='Open Folder...')
-        self.OpenFolderButton.pack()
+        im = tk.PhotoImage(file='./icons/OPEN_button.png')
+        self.OpenFolderButton = tk.Button(self, text='  Open Folder...  ',
+                                          image=im, compound=tk.LEFT,
+                                          cursor="hand2")
+        self.OpenFolderButton.image = im
+        self.OpenFolderButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
-        self.NextImageButton = tk.Button(self, text='Next Image >>')
-        self.NextImageButton.pack()
+        im = tk.PhotoImage(file='./icons/NI_button.png')
+        self.NextImageButton = tk.Button(self, text='  Next Image      ',
+                                         image=im, compound=tk.LEFT,
+                                         cursor="hand2")
+        self.NextImageButton.image = im
+        self.NextImageButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
-        self.ClearSelectionButton = tk.Button(self, text='Clear Selection')
-        self.ClearSelectionButton.pack()
+        im = tk.PhotoImage(file='./icons/CS_button.png')
+        self.ClearSelectionButton = tk.Button(self, text='  Clear Selection',
+                                              image=im, compound=tk.LEFT,
+                                              cursor="hand2")
+        self.ClearSelectionButton.image = im
+        self.ClearSelectionButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
-        self.CalculateButton = tk.Button(self, text='Calculate RP')
-        self.CalculateButton.pack()
+        im = tk.PhotoImage(file='./icons/RP__button.png')
+        self.CalculateButton = tk.Button(self, text='  Calculate RP    ',
+                                         image=im, compound=tk.LEFT,
+                                         cursor="hand2")
+        self.CalculateButton.image = im
+        self.CalculateButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
 
 class View:
     def __init__(self, root: tk.Tk, model: AppModel, mode: str):
         self.root = root
         self.frame = tk.Frame(self.root)
-        self.frame.grid(row=0, column=0)
+        self.frame.grid(row=0, column=0, sticky=tk.N)
         self.model = model
         self.mode = mode
 
@@ -50,10 +70,8 @@ class View:
         self.left_menu.CalculateButton.bind(
             '<Button-1>', self.calculate_rp)
 
-        self.canvas = tk.Canvas(width=root.winfo_screenwidth() - 500,
-                                height=root.winfo_screenheight() - 300)
-        self.canvas.grid(row=0, column=1)
-
+        self.canvas = tk.Canvas(cursor='cross', bg='pink')
+        self.canvas.grid(row=0, column=1, sticky=tk.W)
         self.canvas.bind('<Button-1>', self.selection_click)
 
     def open_filedialog(self, event):
@@ -61,23 +79,31 @@ class View:
         self.model.FileNames = askopenfilenames(
             initialdir='~/Pictures', filetypes=[("Images", ".png .jpg .tiff")])
 
+        if not self.model.FileNames:
+            return
+
         print(f'Chosen: {self.model.FileNames}')
 
         self.update_canvas()
 
     def next_image(self, event):
-        self.model.CurrentImage = \
-            (self.model.CurrentImage + 1) % len(self.model.FileNames)
-
-        print(f'CurrentImage: {self.model.FileNames[self.model.CurrentImage]}')
-
-        self.clear_selection(event)
+        self.model.increment_current_image()
         self.update_canvas()
 
     def update_canvas(self):
         self.canvas.delete('all')
-        self.root.img = img = PhotoImage(file=self.model.FileNames[self.model.CurrentImage])
-        self.canvas.create_image(img.width()/2, img.height()/2, image=img)
+
+        if len(self.model.FileNames) == 0:
+            return
+
+        self.root.img = img = \
+            PhotoImage(file=self.model.FileNames[self.model.CurrentImage])
+
+        self.canvas.config(width=img.width(), height=img.height())
+
+        self.canvas.create_image(img.width()/2, img.height()/2, image=img,
+                                 tags=['image'])
+        self.draw_current_selection()
 
     def selection_click(self, event):
         x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
@@ -97,7 +123,6 @@ class View:
         for x, y in self.model.Selection:
             self.canvas.create_oval(x-5, y-5, x+5, y+5,
                                     fill='red', tags='selection')
-            # self.canvas.create_text(x, y, text=f'({x}, {y})')
 
         if len(self.model.Selection) < 2:
             return
@@ -107,13 +132,52 @@ class View:
             fill='red', dash=True, tags='selection')
 
     def calculate_rp(self, event):
-        Cx, Cy = self.model.center_selection()
-        self.canvas.create_oval(Cx-5, Cy-5, Cx+5, Cy+5, fill='green')
         radii = self.model.get_radii()
 
         for radius in radii:
             self.canvas.create_line(*radius, fill='green', dash=True)
 
-        img = Image.open(self.model.FileNames[self.model.CurrentImage])
+        img = Image\
+            .open(self.model.FileNames[self.model.CurrentImage])\
+            .convert("L")
         pixels = img.load()
-        print(pixels[Cy, Cy])
+
+        gammas = range(0, 360, RadialAnalysis.AngleStepDegree)
+        radial_positions = [i for i in
+                            range(0, 100 + RadialAnalysis.RPStepPercent,
+                                  RadialAnalysis.RPStepPercent)]
+
+        rp_data = []
+
+        for radius, gamma in zip(radii, gammas):
+            Rx, Ry = radius[1]
+            Cx, Cy = radius[0]
+
+            d = math.sqrt((Rx - Cx)**2 + (Ry - Cy)**2)
+            delta_p = RadialAnalysis.RPStepPercent / 100 * d
+
+            CurX, CurY = Cx, Cy
+
+            radius_intensity = []
+            for radial_pos in radial_positions:
+                local_intensities = []
+                for i in range(CurX-5, CurX+5):
+                    for j in range(CurY-5, CurY+5):
+                        local_intensities.append(pixels[i, j])
+
+                self.canvas.create_rectangle(
+                    CurX-5, CurY-5, CurX+5, CurY+5, fill='green')
+
+                radius_intensity.append(sum(local_intensities))
+
+                # Calculate next position
+                CurX = int(CurX - math.cos(math.radians(gamma)) * delta_p)
+                CurY = int(CurY - math.sin(math.radians(gamma)) * delta_p)
+
+            rp_data.append(radius_intensity)
+
+        radial_intensity = np.sum(np.array(rp_data), axis=0)
+
+        fig, ax = plt.subplots()
+        ax.plot(radial_positions, radial_intensity)
+        plt.show()
