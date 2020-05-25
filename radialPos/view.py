@@ -140,7 +140,7 @@ class View:
         self.canvas.create_rectangle(
             X - 5, Y - 5, X + 5, Y + 5, fill='green')
 
-        return sum(local_intensities)
+        return sum(local_intensities)/25
 
     def calculate_rp(self, event):
 
