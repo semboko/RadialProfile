@@ -7,9 +7,6 @@ from radialPos.constants import RadialAnalysis
 import numpy as np
 import matplotlib.pyplot as plt
 
-MAX_CANVAS_WIDTH = 800
-MAX_CANVAS_HEIGHT = 500
-
 
 class LeftMenu(tk.Frame):
 
