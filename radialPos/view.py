@@ -4,7 +4,6 @@ from PIL import Image
 from tkinter.filedialog import askopenfilenames
 from radialPos.model import AppModel
 from radialPos.constants import RadialAnalysis
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -103,6 +102,10 @@ class View:
 
         self.canvas.create_image(img.width()/2, img.height()/2, image=img,
                                  tags=['image'])
+
+        self.root.winfo_toplevel().title(
+            self.model.FileNames[self.model.CurrentImage])
+
         self.draw_current_selection()
 
     def selection_click(self, event):
@@ -131,7 +134,19 @@ class View:
             self.model.Selection, self.model.Selection[0],
             fill='red', dash=True, tags='selection')
 
+    def _local_intensity(self, pixels, X, Y):
+        local_intensities = []
+        for i in range(X - 5, X + 5):
+            for j in range(Y - 5, Y + 5):
+                local_intensities.append(pixels[i, j])
+
+        self.canvas.create_rectangle(
+            X - 5, Y - 5, X + 5, Y + 5, fill='green')
+
+        return sum(local_intensities)
+
     def calculate_rp(self, event):
+
         radii = self.model.get_radii()
 
         for radius in radii:
@@ -143,9 +158,9 @@ class View:
         pixels = img.load()
 
         gammas = range(0, 360, RadialAnalysis.AngleStepDegree)
-        radial_positions = [i for i in
-                            range(0, 100 + RadialAnalysis.RPStepPercent,
-                                  RadialAnalysis.RPStepPercent)]
+        radial_positions = \
+            [i for i in range(0, 100 + RadialAnalysis.RPStepPercent,
+                              RadialAnalysis.RPStepPercent)]
 
         rp_data = []
 
@@ -153,28 +168,22 @@ class View:
             Rx, Ry = radius[1]
             Cx, Cy = radius[0]
 
-            d = math.sqrt((Rx - Cx)**2 + (Ry - Cy)**2)
-            delta_p = RadialAnalysis.RPStepPercent / 100 * d
+            d = np.sqrt((Rx - Cx)**2 + (Ry - Cy)**2)
 
-            CurX, CurY = Cx, Cy
-
-            radius_intensity = []
+            radius_intensities = []
             for radial_pos in radial_positions:
-                local_intensities = []
-                for i in range(CurX-5, CurX+5):
-                    for j in range(CurY-5, CurY+5):
-                        local_intensities.append(pixels[i, j])
 
-                self.canvas.create_rectangle(
-                    CurX-5, CurY-5, CurX+5, CurY+5, fill='green')
+                d_pos = d * radial_pos / 100
+                delta_x = int(np.cos(np.radians(gamma)) * d_pos)
+                delta_y = int(np.sin(np.radians(gamma)) * d_pos)
 
-                radius_intensity.append(sum(local_intensities))
+                PosX = Cx - delta_x
+                PosY = Cy - delta_y
 
-                # Calculate next position
-                CurX = int(CurX - math.cos(math.radians(gamma)) * delta_p)
-                CurY = int(CurY - math.sin(math.radians(gamma)) * delta_p)
+                local_intensity = self._local_intensity(pixels, PosX, PosY)
+                radius_intensities.append(local_intensity)
 
-            rp_data.append(radius_intensity)
+            rp_data.append(radius_intensities)
 
         radial_intensity = np.sum(np.array(rp_data), axis=0)
 
