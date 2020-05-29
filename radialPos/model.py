@@ -1,54 +1,13 @@
-from typing import List, Tuple
-import numpy as np
-import math
+from radialPos.selection import Selection
+from PIL import Image
 from radialPos.constants import RadialAnalysis
+import numpy as np
 
 
 class AppModel:
     FileNames: str
     CurrentImage: int = 0
-    Selection = []
-
-    def center_selection(self) -> (int, int):
-        if not self.Selection:
-            print("No selection found")
-            return
-
-        min_x, max_x, min_y, max_y = math.inf, 0, math.inf, 0
-
-        for Px, Py in self.Selection:
-            if Px < min_x:
-                min_x = Px
-            if Px > max_x:
-                max_x = Px
-            if Py < min_y:
-                min_y = Py
-            if Py > max_y:
-                max_y = Py
-
-        Cx = min_x + (max_x - min_x)/2
-        Cy = min_y + (max_y - min_y)/2
-
-        return Cx, Cy
-
-    # Alpha-angles for each selection point
-    def sp_angles(self, C: tuple):
-        Zx = 0
-        Cx, Cy = C
-
-        angles = []
-
-        for Px, Py in self.Selection:
-            nom = Cx*(Cx-Zx) - Px*(Cx + Zx)
-            denom = (Cx-Zx) * math.sqrt((Cy - Py)**2 + (Cx-Px)**2)
-            alpha = math.degrees(math.acos(nom / denom))
-
-            if Py > Cy:
-                alpha = 180 + (180 - alpha)
-
-            angles.append(alpha)
-
-        return angles
+    Selection: Selection = Selection()
 
     def increment_current_image(self):
         self.CurrentImage = (self.CurrentImage + 1) % len(self.FileNames)
@@ -58,77 +17,57 @@ class AppModel:
         self.CurrentImage = (self.CurrentImage - 1) % len(self.FileNames)
         print(f'CurrentImage: {self.FileNames[self.CurrentImage]}')
 
-    def arrange_selection(self):
-        Cx, Cy = self.center_selection()
-        angles = self.sp_angles((Cx, Cy))
-
-        np_selection = np.array(self.Selection)
-        order = np.argsort(angles)
-        new_selection = [tuple(i) for i in np_selection[order]]
-        self.Selection = new_selection
-
-    def between_sp(self, gamma):
-        Cx, Cy = self.center_selection()
-        angles = self.sp_angles((Cx, Cy))
-
-        for i in range(0, len(angles)):
-            if gamma <= angles[i]:
-                P2 = self.Selection[i]
-                P1 = self.Selection[i-1]
-                return P1, P2
-
-        return self.Selection[-1], self.Selection[0]
-
-    def selection_max_radius(self):
-        Cx, Cy = self.center_selection()
-        max_radius = 0
-
-        for Px, Py in self.Selection:
-            radius = math.sqrt((Cy-Py)**2 + (Cx-Px)**2)
-            if radius > max_radius:
-                max_radius = radius
-
-        return max_radius
-
     @staticmethod
-    def line_intersection(line1, line2):
-        # From: https://stackoverflow.com/questions/20677795
-        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+    def _local_intensity(pixels, X, Y):
+        local_intensities = []
+        for i in range(X - 5, X + 5):
+            for j in range(Y - 5, Y + 5):
+                local_intensities.append(pixels[i, j])
 
-        def det(a, b):
-            return a[0] * b[1] - a[1] * b[0]
+        # self.canvas.create_rectangle(
+        #     X - 5, Y - 5, X + 5, Y + 5, fill='green')
 
-        div = det(xdiff, ydiff)
+        return sum(local_intensities)/25
 
-        if div == 0:
-            raise Exception('lines do not intersect')
+    def scan_current_selection(self):
+        radial_lines = self.Selection.get_radial_lines()
 
-        d = (det(*line1), det(*line2))
-        x = det(d, xdiff) / div
-        y = det(d, ydiff) / div
+        img = Image \
+            .open(self.FileNames[self.CurrentImage]) \
+            .convert("L")
 
-        return x, y
+        pixels = img.load()
 
-    def get_radii(self):
-        Cx, Cy = self.center_selection()
-        max_radius = self.selection_max_radius()
+        radial_steps = range(0, 360, RadialAnalysis.AngleStepDegree)
 
-        extreme_points = []
+        radial_positions = \
+            [i for i in range(0, 100 + RadialAnalysis.RPStepPercent,
+                              RadialAnalysis.RPStepPercent)]
 
-        for gamma in range(0, 360, RadialAnalysis.AngleStepDegree):
+        rp_data = []
 
-            rad_gamma = math.radians(gamma)
-            Rx = Cx - math.cos(rad_gamma) * max_radius
-            Ry = Cy - math.sin(rad_gamma) * max_radius
+        for radial_line, gamma in zip(radial_lines, radial_steps):
+            Rx, Ry = radial_line[1]
+            Cx, Cy = radial_line[0]
 
-            # Selection points intersected by the gamma-vector
-            P1, P2 = self.between_sp(gamma)
+            d = np.sqrt((Rx - Cx)**2 + (Ry - Cy)**2)
 
-            # Extreme points of the radii
-            Ex, Ey = self.\
-                line_intersection((P1, P2), ((Cx, Cy), (Rx, Ry)))
-            extreme_points.append((Ex, Ey))
+            radius_intensities = []
+            for radial_pos in radial_positions:
 
-        return [((int(Cx), int(Cy)), (int(Px), int(Py)))
-                for Px, Py in extreme_points]
+                d_pos = d * radial_pos / 100
+                delta_x = int(np.cos(np.radians(gamma)) * d_pos)
+                delta_y = int(np.sin(np.radians(gamma)) * d_pos)
+
+                PosX = Cx - delta_x
+                PosY = Cy - delta_y
+
+                local_intensity = self._local_intensity(pixels, PosX, PosY)
+                radius_intensities.append(local_intensity)
+
+            rp_data.append(radius_intensities)
+
+        radial_intensities = np.sum(np.array(rp_data), axis=0)
+
+        return radial_positions, radial_intensities
+

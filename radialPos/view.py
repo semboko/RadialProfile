@@ -1,6 +1,5 @@
 import tkinter as tk
 from PIL.ImageTk import PhotoImage
-from PIL import Image
 from tkinter.filedialog import askopenfilenames
 from radialPos.model import AppModel
 from radialPos.constants import RadialAnalysis
@@ -118,7 +117,7 @@ class View:
         self.canvas.delete('selection')
 
         if len(self.model.Selection) > 2:
-            self.model.arrange_selection()
+            self.model.Selection.rearrange()
 
         for x, y in self.model.Selection:
             self.canvas.create_oval(x-5, y-5, x+5, y+5,
@@ -131,58 +130,15 @@ class View:
             self.model.Selection, self.model.Selection[0],
             fill='red', dash=True, tags='selection')
 
-    def _local_intensity(self, pixels, X, Y):
-        local_intensities = []
-        for i in range(X - 5, X + 5):
-            for j in range(Y - 5, Y + 5):
-                local_intensities.append(pixels[i, j])
-
-        self.canvas.create_rectangle(
-            X - 5, Y - 5, X + 5, Y + 5, fill='green')
-
-        return sum(local_intensities)/25
-
     def calculate_rp(self, event):
 
-        radii = self.model.get_radii()
-
+        # Draw radii
+        radii = self.model.Selection.get_radial_lines()
         for radius in radii:
             self.canvas.create_line(*radius, fill='green', dash=True)
 
-        img = Image\
-            .open(self.model.FileNames[self.model.CurrentImage])\
-            .convert("L")
-        pixels = img.load()
-
-        gammas = range(0, 360, RadialAnalysis.AngleStepDegree)
-        radial_positions = \
-            [i for i in range(0, 100 + RadialAnalysis.RPStepPercent,
-                              RadialAnalysis.RPStepPercent)]
-
-        rp_data = []
-
-        for radius, gamma in zip(radii, gammas):
-            Rx, Ry = radius[1]
-            Cx, Cy = radius[0]
-
-            d = np.sqrt((Rx - Cx)**2 + (Ry - Cy)**2)
-
-            radius_intensities = []
-            for radial_pos in radial_positions:
-
-                d_pos = d * radial_pos / 100
-                delta_x = int(np.cos(np.radians(gamma)) * d_pos)
-                delta_y = int(np.sin(np.radians(gamma)) * d_pos)
-
-                PosX = Cx - delta_x
-                PosY = Cy - delta_y
-
-                local_intensity = self._local_intensity(pixels, PosX, PosY)
-                radius_intensities.append(local_intensity)
-
-            rp_data.append(radius_intensities)
-
-        radial_intensity = np.sum(np.array(rp_data), axis=0)
+        radial_positions, radial_intensity = \
+            self.model.scan_current_selection()
 
         fig, ax = plt.subplots()
         ax.plot(radial_positions, radial_intensity)
