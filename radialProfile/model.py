@@ -2,6 +2,7 @@ from radialProfile.selection import Selection
 from PIL import Image
 from radialProfile.constants import RadialAnalysis
 import numpy as np
+from typing import List
 
 
 class AppModel:
@@ -72,3 +73,8 @@ class AppModel:
 
         return radial_positions, radial_intensities
 
+    @staticmethod
+    def write_results(output: str, pos: List[float], intensities: List[float]):
+        output.write("X,Y\n")
+        for p, i in zip(pos, intensities):
+            output.write(str(round(p, 4)) + ',' + str(round(i, 4)) + '\n')

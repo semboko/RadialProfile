@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL.ImageTk import PhotoImage
-from tkinter.filedialog import askopenfilenames
+from tkinter.filedialog import askopenfilenames, asksaveasfile
 from radialProfile.model import AppModel
 from radialProfile.constants import RadialAnalysis
 import numpy as np
@@ -141,6 +141,10 @@ class View:
             self.model.scan_current_selection()
 
         self.show_plot(radial_positions, radial_intensity)
+
+        output_file = asksaveasfile(mode='w', defaultextension=".csv")
+        self.model\
+            .write_results(output_file, radial_positions, radial_intensity)
 
     def show_plot(self, radial_positions, radial_intensity):
         fig, ax = plt.subplots()
