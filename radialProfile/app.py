@@ -1,7 +1,7 @@
 import tkinter as tk
-from radialPos.model import AppModel
-from radialPos.constants import AppTitle, AppModes
-from radialPos.view import View
+from radialProfile.model import AppModel
+from radialProfile.constants import AppTitle, AppModes
+from radialProfile.view import View
 
 
 # Controller

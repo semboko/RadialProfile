@@ -1,6 +1,6 @@
-from radialPos.selection import Selection
+from radialProfile.selection import Selection
 from PIL import Image
-from radialPos.constants import RadialAnalysis
+from radialProfile.constants import RadialAnalysis
 import numpy as np
 
 

@@ -1,8 +1,8 @@
 import tkinter as tk
 from PIL.ImageTk import PhotoImage
 from tkinter.filedialog import askopenfilenames
-from radialPos.model import AppModel
-from radialPos.constants import RadialAnalysis
+from radialProfile.model import AppModel
+from radialProfile.constants import RadialAnalysis
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -140,6 +140,11 @@ class View:
         radial_positions, radial_intensity = \
             self.model.scan_current_selection()
 
+        self.show_plot(radial_positions, radial_intensity)
+
+    def show_plot(self, radial_positions, radial_intensity):
         fig, ax = plt.subplots()
         ax.plot(radial_positions, radial_intensity)
+        ax.set_xticks([0, 25, 50, 75, 100])
+        ax.set_xticklabels(['Center', 25, 50, 75, 'Envelope'])
         plt.show()

@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List
-from radialPos.constants import RadialAnalysis
+from radialProfile.constants import RadialAnalysis
 
 
 def line_intersection(line1, line2):
