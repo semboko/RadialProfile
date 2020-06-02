@@ -13,28 +13,28 @@ class LeftMenu(tk.Frame):
         super().__init__(*args, **kwargs)
         self.pack(ipadx=20)
 
-        im = tk.PhotoImage(file='./icons/OPEN_button.png')
+        im = tk.PhotoImage(file='radialProfile/icons/OPEN_button.png')
         self.OpenFolderButton = tk.Button(self, text='  Open Folder...  ',
                                           image=im, compound=tk.LEFT,
                                           cursor="hand2")
         self.OpenFolderButton.image = im
         self.OpenFolderButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
-        im = tk.PhotoImage(file='./icons/NI_button.png')
+        im = tk.PhotoImage(file='radialProfile/icons/NI_button.png')
         self.NextImageButton = tk.Button(self, text='  Next Image      ',
                                          image=im, compound=tk.LEFT,
                                          cursor="hand2")
         self.NextImageButton.image = im
         self.NextImageButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
-        im = tk.PhotoImage(file='./icons/CS_button.png')
+        im = tk.PhotoImage(file='radialProfile/icons/CS_button.png')
         self.ClearSelectionButton = tk.Button(self, text='  Clear Selection',
                                               image=im, compound=tk.LEFT,
                                               cursor="hand2")
         self.ClearSelectionButton.image = im
         self.ClearSelectionButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
-        im = tk.PhotoImage(file='./icons/RP__button.png')
+        im = tk.PhotoImage(file='radialProfile/icons/RP__button.png')
         self.CalculateButton = tk.Button(self, text='  Calculate RP    ',
                                          image=im, compound=tk.LEFT,
                                          cursor="hand2")

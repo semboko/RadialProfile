@@ -1,6 +1,6 @@
 import tkinter as tk
 from radialProfile.model import AppModel
-from radialProfile.constants import AppTitle, AppModes
+from radialProfile.constants import AppTitle
 from radialProfile.view import View
 
 
@@ -15,7 +15,3 @@ class Application:
     def run(self):
         self.root.title(AppTitle)
         self.root.mainloop()
-
-
-app = Application(mode=AppModes.DEBUG)
-app.run()
