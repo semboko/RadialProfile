@@ -11,12 +11,9 @@ class AppModel:
     Selection: Selection = Selection()
 
     def increment_current_image(self):
+        if not self.FileNames:
+            raise Exception("No images found")
         self.CurrentImage = (self.CurrentImage + 1) % len(self.FileNames)
-        print(f'CurrentImage: {self.FileNames[self.CurrentImage]}')
-
-    def decrement_current_image(self):
-        self.CurrentImage = (self.CurrentImage - 1) % len(self.FileNames)
-        print(f'CurrentImage: {self.FileNames[self.CurrentImage]}')
 
     @staticmethod
     def _local_intensity(pixels, X, Y):

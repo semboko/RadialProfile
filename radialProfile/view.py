@@ -41,10 +41,18 @@ class LeftMenu(tk.Frame):
         self.CalculateButton.image = im
         self.CalculateButton.pack(side=tk.TOP, ipadx=5, ipady=10)
 
+        self.ErrorMessage = tk.StringVar()
+        self.ErrorLabel = tk.Label(self, fg='red', wraplength=120,
+                                   justify=tk.LEFT,
+                                   textvariable=self.ErrorMessage)
+        self.ErrorLabel.pack(side=tk.TOP, ipadx=5, ipady=10)
+
 
 class View:
     def __init__(self, root: tk.Tk, model: AppModel, mode: str):
         self.root = root
+        self.root.report_callback_exception = self.exception_handler
+
         self.frame = tk.Frame(self.root)
         self.frame.grid(row=0, column=0, sticky=tk.N)
         self.model = model
@@ -66,7 +74,7 @@ class View:
             '<Button-1>', self.calculate_rp)
 
         self.canvas = tk.Canvas(cursor='cross', bg='pink')
-        self.canvas.grid(row=0, column=1, sticky=tk.W)
+        self.canvas.grid(row=0, column=1, sticky=tk.NW)
         self.canvas.bind('<Button-1>', self.selection_click)
 
     def open_filedialog(self, event):
@@ -75,7 +83,7 @@ class View:
             initialdir='~/Pictures', filetypes=[("Images", ".png .jpg .tiff")])
 
         if not self.model.FileNames:
-            return
+            raise Exception('No files chosen')
 
         print(f'Chosen: {self.model.FileNames}')
 
@@ -145,6 +153,9 @@ class View:
         output_file = asksaveasfile(mode='w', defaultextension=".csv")
         self.model\
             .write_results(output_file, radial_positions, radial_intensity)
+
+    def exception_handler(self, rootSelf, e: Exception, traceback, *args):
+        self.left_menu.ErrorMessage.set(str(e))
 
     def show_plot(self, radial_positions, radial_intensity):
         fig, ax = plt.subplots()
