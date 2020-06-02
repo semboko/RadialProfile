@@ -67,7 +67,8 @@ class AppModel:
 
             rp_data.append(radius_intensities)
 
-        radial_intensities = np.sum(np.array(rp_data), axis=0)
+        radial_intensities = np.sum(np.array(rp_data), axis=0) * \
+                             RadialAnalysis.AngleStepDegree / 360
 
         return radial_positions, radial_intensities
 
